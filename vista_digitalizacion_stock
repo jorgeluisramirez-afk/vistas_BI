@@ -1,56 +1,51 @@
-CREATE OR REPLACE TABLE
-  `rs-prd-dlk-sbx-digt-d12c.desa_visualizacion.vista_digitalizacion_stock` AS
 WITH
   ud_app AS (
-  SELECT
-    DISTINCT -- num_documento,
-    id_persona,
-    MIN(fec_visita) primer_ingreso,
-    1 usuario_app
-  FROM
-    `rs-shr-al-analyticsz-prj-ebc1.anl_digital.usuario_digital`
-  WHERE
-    agr_canal_digital IN ('App')
-  GROUP BY
-    ALL ),
+    SELECT
+      DISTINCT
+      id_persona,
+      MIN(fec_visita) primer_ingreso,
+      1 usuario_app
+    FROM
+      `rs-shr-al-analyticsz-prj-ebc1.anl_digital.usuario_digital`
+    WHERE
+      agr_canal_digital IN ('App')
+    GROUP BY
+      ALL
+  ),
   final AS (
-  SELECT
-    periodo,
-    producto_forecast_agrup,
-    --fec_procesamiento,
-    --pol_num_documento_contratante,
-    pol_id_contratante,
-    usuario_app,
-    SUM(mnt_prima_contable_usd)prima
-  FROM
-    `desa_visualizacion.mig_rs_contable_detalle_digital` a
-  LEFT JOIN
-    ud_app b
-  ON
-    a.pol_id_contratante=b.id_persona --and a.fec_procesamiento>=b.primer_ingreso
-  WHERE
-    vta_nueva_stock='STOCK'
-    AND periodo BETWEEN'2025-01-01'
-    AND '2025-07-01'
-  GROUP BY
-    ALL )
+    SELECT
+      periodo,
+      producto_forecast_agrup,
+      producto_filtro,
+      pol_id_contratante,
+      usuario_app,
+      SUM(mnt_prima_contable_usd) prima
+    FROM
+      `desa_visualizacion.mig_rs_contable_detalle_digital` a
+    LEFT JOIN
+      ud_app b
+    ON
+      a.pol_id_contratante = b.id_persona
+      AND a.fec_procesamiento >= b.primer_ingreso
+    WHERE
+      vta_nueva_stock = 'STOCK'
+      AND periodo BETWEEN '2025-01-01' AND '2025-06-01'
+    GROUP BY
+      ALL
+  )
 SELECT
   periodo,
   producto_forecast_agrup,
-  SUM(prima)prima,
-  SUM(CASE
-      WHEN usuario_app=1 THEN prima
-      ELSE 0
-  END
-    ) prima_usuario_app
+  producto_filtro,
+  SUM(prima) AS prima,
+  SUM(CASE WHEN usuario_app = 1 THEN prima ELSE 0 END) AS prima_usuario_app,
+  COUNT(DISTINCT pol_id_contratante) AS total_contratantes,
+  COUNT(DISTINCT CASE WHEN usuario_app = 1 THEN pol_id_contratante ELSE NULL END) AS contratantes_app
 FROM
   final
 WHERE
-  producto_forecast_agrup IN ('01. AMI',
-    '02. Vehicular',
-    '05. Vida Seguros')
+  producto_forecast_agrup IN ('01. AMI', '02. Vehicular', '05. Vida Seguros')
 GROUP BY
   ALL
 ORDER BY
-  1,
-  2 DESC
+  1, 2 DESC
