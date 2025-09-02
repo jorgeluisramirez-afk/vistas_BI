@@ -1,3 +1,5 @@
+CREATE OR REPLACE TABLE
+  `rs-prd-dlk-sbx-digt-d12c.desa_visualizacion.vista_digitalizacion_stock` AS
 WITH
   ud_app AS (
     SELECT
