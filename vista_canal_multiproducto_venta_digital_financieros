@@ -1,49 +1,51 @@
 CREATE OR REPLACE TABLE
   `rs-prd-dlk-sbx-digt-d12c.desa_visualizacion.vista_canal_multiproducto_venta_digital_financieros` AS
-WITH
-  contable_financieros AS (
+WITH contable_financieros AS (
   SELECT
     periodo,
     num_poliza,
     id_producto,
-    'digital' marca
+    'digital' AS marca
   FROM
     `rs-prd-dlk-sbx-digt-d12c.desa_visualizacion.mig_rs_contable_detalle_digital`
   WHERE
-    vta_nueva_stock='VENTA NUEVA'
-    AND periodo>='2025-01-01'
-    AND cont_dig_filtro=1
+    vta_nueva_stock = 'VENTA NUEVA'
+    AND periodo >= '2025-01-01'
+    AND cont_dig_filtro = 1
   QUALIFY
-    ROW_NUMBER() OVER (PARTITION BY num_poliza, id_producto ORDER BY fec_procesamiento DESC) = 1 )
+    ROW_NUMBER() OVER (PARTITION BY num_poliza, id_producto ORDER BY fec_procesamiento DESC) = 1
+)
+
 SELECT
   v.periodo,
+  v.des_producto,
+  v.id_producto,
   producto_forecast_agrup,
-  SUM(mnt_prima_contable_usd ) AS prima,
+  SUM(mnt_prima_contable_usd) AS prima,
   SUM(CASE
-      WHEN marca IS NOT NULL THEN mnt_prima_contable_usd
-      ELSE 0
-  END
-    ) prima_digital
+        WHEN marca IS NOT NULL THEN mnt_prima_contable_usd
+        ELSE 0
+      END) AS prima_digital
 FROM
   `rs-shr-al-analyticsz-prj-ebc1.anl_produccion.produccion_resumen` v
 LEFT JOIN
   `rs-prd-dlk-sbx-digt-d12c.desa_ingesta.de_rs_maestro_prodcontable2` p2
+  ON v.id_producto = 'AX-' || p2.codprod
 LEFT JOIN
   `rs-prd-dlk-sbx-digt-d12c.desa_ingesta.de_rs_db_ventas_t_producto_fam` d1
-ON
-  d1.producto_agrup = p2.agrup
-ON
-  v.id_producto = 'AX-'||p2.codprod
+  ON d1.producto_agrup = p2.agrup
 LEFT JOIN
   contable_financieros c
-ON
-  v.num_poliza=c.num_poliza
-  AND v.id_producto=c.id_producto
-  AND v.periodo=c.periodo
+  ON v.num_poliza = c.num_poliza
+     AND v.id_producto = c.id_producto
+     AND v.periodo = c.periodo
 WHERE
-  v.periodo>='2025-01-01'
+  v.periodo >= '2025-01-01'
   AND pol_des_canal = 'FUERZA DE VENTA'
   AND pol_des_subcanal IN ('RENTA VITALICIA')
-  AND vta_nueva_stock='VENTA NUEVA'
+  AND vta_nueva_stock = 'VENTA NUEVA'
 GROUP BY
-  ALL
+  v.periodo,
+  v.des_producto,
+  v.id_producto,
+  producto_forecast_agrup;
