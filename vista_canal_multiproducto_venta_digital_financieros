@@ -25,7 +25,9 @@ SELECT
   SUM(CASE
         WHEN marca IS NOT NULL THEN mnt_prima_contable_usd
         ELSE 0
-      END) AS prima_digital
+      END) AS prima_digital,
+  COUNT(DISTINCT v.num_poliza) AS total_polizas,
+  COUNT(DISTINCT CASE WHEN marca IS NOT NULL THEN v.num_poliza END) AS polizas_digital
 FROM
   `rs-shr-al-analyticsz-prj-ebc1.anl_produccion.produccion_resumen` v
 LEFT JOIN
